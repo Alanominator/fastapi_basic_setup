@@ -13,6 +13,17 @@ pip3 install -r requirements/base.txt
 
 
 
+# create database
+
+
+```
+DATABASE_URL = postgresql://alan:fastapi@localhost:5432/fastapi
+```
+
+
+
+
+
 
 # make migrations
 
@@ -21,3 +32,5 @@ alembic revision --autogenerate -m 'comment'
 
 ## execute last migration file (head)
 alembic upgrade head
+
+
