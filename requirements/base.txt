@@ -1,0 +1,22 @@
+
+# pip3 install -r requirements/base.txt 
+
+# to read .env
+python-dotenv
+
+fastapi[all]
+
+
+sqlalchemy
+alembic
+
+psycopg2
+psycopg2-binary
+
+fastapi-sqlalchemy
+
+# 
+python-jose[cryptography]
+passlib[bcrypt]
+
+jwt

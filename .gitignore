@@ -1,0 +1,13 @@
+
+# environment variables
+/.env
+
+# virtual environment
+/env
+
+
+
+__pycache__/
+
+# migrations versions
+/alembic/versions/*
