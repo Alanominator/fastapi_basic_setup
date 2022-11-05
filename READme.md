@@ -1,8 +1,5 @@
-##### Folder structure is based on
-https://github.com/zhanymkanov/fastapi-best-practices#1-project-structure-consistent--predictable
+##### Folder structure for fastapi project
 
-
-Made in https://dillinger.io/
 
 .
 # setup
