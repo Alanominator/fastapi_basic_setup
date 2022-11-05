@@ -10,13 +10,12 @@ This structure is done for alembic
 """
 
 
-
 from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()
 
 
-from .models import *
-
+from main_modules.auth.models import *
+from core.models import *
 
