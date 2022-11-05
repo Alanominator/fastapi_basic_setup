@@ -49,3 +49,11 @@ alembic revision --autogenerate -m 'comment'
 alembic upgrade head
 ```
 
+
+# to run server
+```
+cd _src
+
+uvicorn main:app --reload
+```
+

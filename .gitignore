@@ -11,4 +11,4 @@
 __pycache__/
 
 # migrations versions
-/alembic/versions/*
+/_src/alembic/versions/*
