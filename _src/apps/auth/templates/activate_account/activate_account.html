@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        Document
+    </title>
+    <style>
+        .activation_link {
+            background: yellow;
+            padding: 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-flex;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>
+        Hello, you've just registered in NAME site
+    </h1>
+
+    <p>
+        To activate account click the button.
+    </p>
+
+    <br />
+
+    <a class="activation_link" href="http://192.168.0.106:8000/users/activate?token={{token}}">
+        activate account
+    </a>
+
+</body>
+
+</html>

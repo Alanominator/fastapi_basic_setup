@@ -16,6 +16,6 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
-from main_modules.auth.models import *
+from apps.auth.models import *
 from core.models import *
 

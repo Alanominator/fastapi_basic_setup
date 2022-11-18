@@ -13,10 +13,27 @@ alembic
 psycopg2
 psycopg2-binary
 
+# for async orm
+asyncpg
+
+celery
+
 fastapi-sqlalchemy
+
+retry
+
+Jinja2
 
 # 
 python-jose[cryptography]
-passlib[bcrypt]
+passlib
+cryptography
 
 jwt
+
+
+python-multipart
+
+
+requests
+

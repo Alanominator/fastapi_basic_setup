@@ -1,5 +1,4 @@
-##### Folder structure for fastapi project
-
+##### Folder structure for fastapi project, integrated with postgres, rabbimq
 
 .
 # setup
@@ -20,13 +19,19 @@ pip3 install -r requirements/base.txt
 ```
 
 
-## create database
+## create postgres database
 ```
 ```
+
+## create rabbitmq virtual host
+```
+```
+
 
 ## create .env file with these variables
 ```
 DATABASE_URL = postgresql://user:password@localhost:5432/database_name
+
 ```
 
 
@@ -47,10 +52,12 @@ alembic upgrade head
 ```
 
 
-# to run server
+# run server
 ```
 cd _src
 
-uvicorn main:app --reload
+uvicorn main:app --host=192.168.0.106 --port=8000 --reload
 ```
 
+# run celery
+celery -A celery_app  worker -l INFO

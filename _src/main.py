@@ -1,16 +1,35 @@
-import uvicorn
+from unittest.result import failfast
 from fastapi import FastAPI
-from core.database import *
+from apps.auth.routers import auth_router
+
+from core.utils import include_routers
 
 
-app = FastAPI()
+
+app = FastAPI(
+    title="Title",
+    description="Description",
+    version="1.0.0",
+    # routers=routers,
+    # middleware=middleware
+    # todo DOCUMENTATION
+)
 
 
-@app.get("/")
-async def main():
-   return {
-      "hello":"world"
-   }
+
+include_routers(application=app, routers_to_include=[
+    auth_router,
+])
+
+
+
+
+
+# app.include_router(auth_router)
+
 
 if __name__ == "__main__":
-   uvicorn.run(app, host="192.168.0.106", port=8000)
+    import uvicorn
+    uvicorn.run(app, host="192.168.0.106", port=8000)
+
+

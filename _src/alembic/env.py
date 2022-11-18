@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 
 # import database url
-from core.database import SQLALCHEMY_DATABASE_URL
+from core.config.database.database import SQLALCHEMY_DATABASE_URL
 
 
 # set imported database url for alembic
@@ -28,7 +28,7 @@ config.set_section_option(section, "DB_URL", SQLALCHEMY_DATABASE_URL)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from core.base import Base
+from core.config.database.base import Base
 target_metadata = Base.metadata
 
 
