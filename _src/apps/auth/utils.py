@@ -23,7 +23,7 @@ from . import exceptions
 
 
 
-def isEmailValid(email):
+def isEmailValid(email: str):
     
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     
@@ -33,6 +33,10 @@ def isEmailValid(email):
         return False
 
 
+def isPasswordValid(password: str):
+    if len(password) > 10 and password != "tesla":
+        return True
+    return False
 
 
 def gen_string(length:int = 30) -> str:

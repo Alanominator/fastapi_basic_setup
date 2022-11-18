@@ -4,15 +4,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from core.config.database.utils import get_db
 
-from fastapi import Query
-
 from . import exceptions
-
 from . import crud
 from . import schemas
 from . import utils
 from . import tasks
-
 
 import urllib.parse
 
@@ -20,9 +16,13 @@ from core.config import settings
 
 import requests
 
-
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jinja2 import Environment, FileSystemLoader
+
+from fastapi.responses import StreamingResponse
+
+from fast_captcha import img_captcha
+
 
 from retry import retry
 import requests
@@ -32,13 +32,41 @@ import requests
 
 
 auth_router = fastapi.APIRouter(
-    prefix="/users",
-    # responses={404: {"description": "Not found"}},
+    prefix="/users"
 )
 
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+
+
+
+# TODO
+"""
+change some response status codes
+
+fix schemes
+"""
+
+
+
+
+
+# TODO
+@auth_router.get('/captcha', summary='captcha', name='captcha')
+def get_captcha():
+    img, text = img_captcha()
+
+    # send hash of encrypted text
+
+    
+
+
+    return StreamingResponse(content=img, media_type='image/jpeg')
+
+
+
+
 
 
 
@@ -50,8 +78,7 @@ async def register_user(*,
 ):
     # todo recaptcha
 
-    # todo check if user with this email already exists , else -> 400
-
+    # check if user with given email exists, if yes, raise 400
     if ( crud.get_user_by_email(db, email = user.email) ):
         return JSONResponse(
             status_code = status.HTTP_400_BAD_REQUEST,
@@ -69,21 +96,23 @@ async def register_user(*,
             }
         )
 
+    # validate password
+    if not utils.isPasswordValid(user.password):
+        return JSONResponse(status_code = status.HTTP_400_BAD_REQUEST, 
+            content={
+                "message": "Password is invalid"
+            }
+        )
 
-    # todo validate password
 
-    # todo confirm password
+    # Everything is ok, register
 
-    # ==================
-
-
+    # run celery tasks
     tasks.register_task.delay(
         email=user.email,
         password=user.password
     )
 
-
-    # =======================
 
     return JSONResponse(
         status_code = status.HTTP_201_CREATED,
