@@ -5,8 +5,6 @@ This variable should be imported from another files with models, which inherits 
 
 And then into this file we should import models like "from .models import *"
 
-This structure is done for alembic
-
 """
 
 
@@ -16,6 +14,8 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 
 
+# -> # register your models here
+# from core.models import *
 from apps.auth.models import *
-from core.models import *
+
 

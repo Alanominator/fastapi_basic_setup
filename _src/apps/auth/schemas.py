@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    password_confirmation: str
 
 
 # class User(UserBase):

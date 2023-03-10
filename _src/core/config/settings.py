@@ -1,42 +1,40 @@
-from fastapi_mail import ConnectionConfig
-from pydantic import BaseModel, EmailStr
-from typing import List
+# """
 
 
-# class EmailSchema(BaseModel):
-#     email: List[EmailStr]
+# """
 
 
-# email_connection_config = ConnectionConfig(
-#     MAIL_USERNAME ="username",
-#     MAIL_PASSWORD = "**********",
-#     MAIL_FROM = "test@email.com",
-#     MAIL_PORT = 465,
-#     MAIL_SERVER = "mail server",
-#     MAIL_STARTTLS = False,
-#     MAIL_SSL_TLS = True,
-#     USE_CREDENTIALS = True,
-#     VALIDATE_CERTS = True
-# )
+from .utils import load_env, get_env_var
 
 
-GOOGLE_CLIENT_ID = "598977301108-80aknbj43qfhrbm9h25o33q8sk5m5rpj.apps.googleusercontent.com"
-
-GOOGLE_CLIENT_SECRET = "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"
+load_env()
 
 
 
+# # # email settings
+EMAIL = get_env_var("EMAIL")
+EMAIL_PASSWORD = get_env_var("EMAIL_PASSWORD")
+EMAIL_SMTP_SERVER = "smtp.gmail.com"
+EMAIL_PORT = 465
 
 
+# google oauth2 app settings
+GOOGLE_CLIENT_ID = get_env_var("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = get_env_var("GOOGLE_CLIENT_SECRET")
+
+
+# jwt token settings
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_MINUTES = 30
 
+# secret key (used for ecryption / decryption)
 # dd if=/dev/urandom bs=32 count=1 2>/dev/null | openssl base64
 SECRET_KEY = "SafeoMrkRus6q1A2snT2E2tjetuBXJ+WBpyUFegOnpo="
+# SECRET_KEY = get_env_var("SECRET_KEY")
+
 
 
 # TODO timezone, 
 
-
-
+# algorithm for encryption
 ALGORITHM = "HS256"

@@ -2,6 +2,7 @@ import fastapi
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
+
 from core.config.database.utils import get_db
 
 from . import exceptions
@@ -27,7 +28,7 @@ from fast_captcha import img_captcha
 from retry import retry
 import requests
 
-
+from fastapi.responses import HTMLResponse
 
 
 
@@ -51,16 +52,13 @@ fix schemes
 
 
 
-
 # TODO
 @auth_router.get('/captcha', summary='captcha', name='captcha')
 def get_captcha():
     img, text = img_captcha()
 
     # send hash of encrypted text
-
-    
-
+    # it is not safe
 
     return StreamingResponse(content=img, media_type='image/jpeg')
 
@@ -90,27 +88,35 @@ async def register_user(*,
 
     # validate email
     if not utils.isEmailValid(user.email):
-        return JSONResponse(status_code = status.HTTP_400_BAD_REQUEST, 
-            content={
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
+            detail = {
                 "message": "Email is not valid"
             }
         )
 
     # validate password
     if not utils.isPasswordValid(user.password):
-        return JSONResponse(status_code = status.HTTP_400_BAD_REQUEST, 
-            content={
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
+            detail = {
                 "message": "Password is invalid"
             }
         )
 
+    # if password_confirmation not equals to password, raise error
+    if not user.password == user.password_confirmation:
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
+            detail = {
+                "message": "Password confirmation is not equal to password"
+            }
+        )
 
-    # Everything is ok, register
+
+    # Everything is ok, register ->>
 
     # run celery tasks
     tasks.register_task.delay(
-        email=user.email,
-        password=user.password
+        email = user.email,
+        password = user.password
     )
 
 
@@ -170,10 +176,11 @@ async def login(
 ):
 
     email = form_data.username
+    password = form_data.password
 
     db_user = crud.get_user_by_email(db, email)
 
-    if not db_user or not db_user.verify_password(form_data.password):
+    if not db_user or not db_user.verify_password(password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -195,8 +202,6 @@ async def login(
 
 
 
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme)):
 
     user = utils.get_user_by_access_token(
@@ -206,14 +211,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return user
 
 
-@auth_router.get("/some_private_route")
-async def some_private_path(
-    current_user = Depends(get_current_user)
-):
-    return current_user
+# @auth_router.get("/some_private_route")
+# async def some_private_path(
+#     current_user = Depends(get_current_user)
+# ):
+#     return current_user
 
-
-from fastapi.responses import HTMLResponse
 
 
 
@@ -249,7 +252,9 @@ def google_auth_consent():
 
 # @auth_router.get("/google_auth_page") # response_class=RedirectResponse
 # def google_auth_page():
-
+    # """
+    # function redirects user to frontend then frontend automatically makes google login
+    # """
 
 #     url_base = "http://localhost:8000/users/tmp_google_auth?"
 
@@ -285,6 +290,7 @@ def google_login(
     access_token: str = fastapi.Body(embed=True),
     db: Session = Depends(get_db)
 ):
+    
     """
     
 

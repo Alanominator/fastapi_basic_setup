@@ -1,6 +1,7 @@
-from unittest.result import failfast
 from fastapi import FastAPI
+
 from apps.auth.routers import auth_router
+from apps.chat.routers import chat_router
 
 from core.utils import include_routers
 
@@ -16,16 +17,23 @@ app = FastAPI(
 )
 
 
-
 include_routers(application=app, routers_to_include=[
+    # routers to include ->>>
     auth_router,
+    chat_router,
 ])
 
 
 
+@app.get("/")
+def hello():
+    return {
+        "message": "hello world",
+        "docs": "docs is located at '/docs'"
+    }
 
 
-# app.include_router(auth_router)
+
 
 
 if __name__ == "__main__":

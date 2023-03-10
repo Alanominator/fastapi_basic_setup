@@ -6,21 +6,19 @@ database config settings
 
 
 from sqlalchemy import create_engine
-# from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-from ...utils import get_env_var, load_env
-
+from ..utils import get_env_var, load_env
 
 
 load_env()
 
 
-
 # database url
 SQLALCHEMY_DATABASE_URL = get_env_var("DATABASE_URL")
 
+# TODO
 ASYNC_SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://gwen@localhost/fast_lms"
 
 
@@ -50,8 +48,4 @@ AsyncSessionLocal = sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False
 )
-
-
-# Base = declarative_base()
-
 
