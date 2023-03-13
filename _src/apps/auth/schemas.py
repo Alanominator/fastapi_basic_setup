@@ -3,11 +3,9 @@ from pydantic import BaseModel, validator
 
 # import datetime
 
-class UserBase(BaseModel):
+
+class UserCreate(BaseModel):
     email: str
-
-
-class UserCreate(UserBase):
     password: str
     password_confirmation: str
 
@@ -20,8 +18,16 @@ class UserCreate(UserBase):
 #     class Config:
 #         orm_mode = True
 
-class UserLogin(UserBase):
+
+class UserLogin(BaseModel):
+    email: str
     password: str
 
-# TODO response user scheme, 
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    is_admin: bool
+
+
 # TODO add schemes everywhere

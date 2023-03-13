@@ -41,6 +41,15 @@ auth_router = fastapi.APIRouter(
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
 
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+
+    user = utils.get_user_by_access_token(
+        access_token = token
+    )
+
+    return user
+
+
 
 # TODO
 """
@@ -52,17 +61,40 @@ fix schemes
 
 
 
-# TODO
-@auth_router.get('/captcha', summary='captcha', name='captcha')
-def get_captcha():
-    img, text = img_captcha()
+# # TODO
+# @auth_router.get('/captcha', summary='captcha', name='captcha')
+# def get_captcha():
+#     img, text = img_captcha()
 
-    # send hash of encrypted text
-    # it is not safe
+#     # send hash of encrypted text
+#     # it is not safe
 
-    return StreamingResponse(content=img, media_type='image/jpeg')
+#     return StreamingResponse(content=img, media_type='image/jpeg')
 
 
+# @api_view(['POST'])
+# def recaptcha(request):
+#     captcha_value = request.data['captcha_value']
+
+#     if captcha_value:
+#         r = requests.post(
+#             'https://www.google.com/recaptcha/api/siteverify',
+#             data={
+#                 'secret': settings.CAPTCHA_SECRET_KEY,
+#                 'response': captcha_value,
+#             }
+#         )
+
+#         if r.json()["success"]:
+
+#             c = Captcha.objects.create(value = captcha_value)
+#             c.save()
+
+#             delete_recaptcha.apply_async(countdown = 60 * 2, kwargs = {"id": c.id})
+
+#             return Response(data={'captcha': True}, status=status.HTTP_200_OK)
+#         return Response(status=status.HTTP_400_BAD_REQUEST)
+#     return Response(status=status.HTTP_403_FORBIDDEN)
 
 
 
@@ -76,37 +108,53 @@ async def register_user(*,
 ):
     # todo recaptcha
 
+    errors_to_send = []
+
+
+
+        #     try:
+        #     if not captcha_value:
+        #         raise
+
+        #     c = Captcha.objects.filter(value = captcha_value)[0]
+
+        #     x1 = int(timezone.now().strftime("%s"))
+        #     x2 = int(c.date.strftime("%s"))
+        #     delta_in_seconds = (x1 - x2)
+
+        #     seconds = round(60 - delta_in_seconds, 1)
+
+        #     if seconds > 60 * 2:
+        #         c.delete()
+        #         return Response(data={"messages": [f"Captcha has expired", ]}, status=status.HTTP_400_BAD_REQUEST)
+
+        #     c.delete()
+        # except:
+        #     return Response(data={"messages": [f"Captcha is wrong", ]}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
     # check if user with given email exists, if yes, raise 400
     if ( crud.get_user_by_email(db, email = user.email) ):
-        return JSONResponse(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            content = {
-                "message": "User with this email already exists"
-            }
-        )
+        errors_to_send.append("User with this email already exists")
 
 
     # validate email
     if not utils.isEmailValid(user.email):
-        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
-            detail = {
-                "message": "Email is not valid"
-            }
-        )
+        errors_to_send.push("Email is not valid")
 
     # validate password
     if not utils.isPasswordValid(user.password):
-        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
-            detail = {
-                "message": "Password is invalid"
-            }
-        )
+        errors_to_send.push("Password is invalid")
 
     # if password_confirmation not equals to password, raise error
     if not user.password == user.password_confirmation:
+        errors_to_send.push("Password confirmation must be equal to password")
+
+    if len(errors_to_send) > 0:
         raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, 
             detail = {
-                "message": "Password confirmation is not equal to password"
+                "errors": errors_to_send
             }
         )
 
@@ -131,10 +179,12 @@ async def register_user(*,
 
 
 
-# resend activation password
-# todo check activation token time
-
-
+# TODO
+# @auth_router.get("/resend_actition_password")
+# async def resend_actition_password(*,
+#     db: Session = Depends(get_db)
+# ):
+#     pass
 
 
 
@@ -156,12 +206,16 @@ async def activate_user(*,
             "message":"Token was not found"
         })
 
+    # todo check token time
+    # DELETE_INACTIVE_USER_TIMEOUT_MIN
+
 
     db_token.user.is_active = True
     db.delete(db_token)
     db.commit()
 
 
+    # TODO redirect response
     return {
         "hello": f"Your account has been activated"
     }
@@ -171,12 +225,13 @@ async def activate_user(*,
 
 @auth_router.post("/login")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    user: schemas.UserLogin = fastapi.Body(),
     db: Session = Depends(get_db)
 ):
 
-    email = form_data.username
-    password = form_data.password
+    email = user.email
+    password = user.password
+
 
     db_user = crud.get_user_by_email(db, email)
 
@@ -197,31 +252,28 @@ async def login(
 
     jwt_tokens = utils.create_auth_session_and_get_jwt_tokens(user_id)
 
-
-    return jwt_tokens
-
+    user = schemas.UserResponse.parse_obj(db_user.__dict__).dict()
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-
-    user = utils.get_user_by_access_token(
-        access_token = token
-    )
-
-    return user
+    # TODO return user info with jwt_tokens
+    return {
+        "user": user,
+        "jwt_tokens": jwt_tokens
+    }
 
 
-# @auth_router.get("/some_private_route")
-# async def some_private_path(
-#     current_user = Depends(get_current_user)
-# ):
-#     return current_user
+
+
+
 
 
 
 
 @auth_router.get("/google_auth_consent", response_class=RedirectResponse)
 def google_auth_consent():
+    """
+    function redirects to google auth consent
+    """
 
     # https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?client_id=598977301108-80aknbj43qfhrbm9h25o33q8sk5m5rpj.apps.googleusercontent.com&response_type=token&scope=profile&redirect_uri=http%3A%2F%2Flocalhost%3A8000&service=lso&o2v=2&flowName=GeneralOAuthFlow
 
@@ -250,36 +302,46 @@ def google_auth_consent():
 
 
 
-# @auth_router.get("/google_auth_page") # response_class=RedirectResponse
-# def google_auth_page():
-    # """
-    # function redirects user to frontend then frontend automatically makes google login
-    # """
-
-#     url_base = "http://localhost:8000/users/tmp_google_auth?"
-
-#     url_params = {
-#         "access_token": "qwqwq"
-#     }
-
-#     url_for_redirect = url_base + urllib.parse.urlencode(url_params)
-
-
-#     return RedirectResponse(url_for_redirect)
+#@auth_router.get("/google_auth_page") # response_class=RedirectResponse
+#def google_auth_page():
+#    """
+#    google consent redirects to this route
+#    this route redirects user to frontend
+#    then frontend automatically makes google login
+#    """
+#
+#    # TODO get access token from url
+#
+#    url_base = "http://localhost:3000/users/google_auth?"
+#
+#    url_params = {
+#        "access_token": "qwqwq"
+#    }
+#
+#    url_for_redirect = url_base + urllib.parse.urlencode(url_params)
+#
+#
+#    return {
+#        "test":"hello"
+#    }
 
 
 
 @auth_router.get("/google_auth_page")
 def google_auth_test_page():
     """
-    for testing. But we use react app
+    google consent screen redirects to this route
+    this route page js redirects to frontend with token query parameter
+    then that frontend makes request to "/google_login"
     """
 
     environment = Environment(loader=FileSystemLoader("apps/auth/templates/"))
     template = environment.get_template("google_auth.html")
 
     return HTMLResponse(
-        template.render()
+        template.render({
+            "frontend_url_base" : "http://localhost:3000"
+        })
     )
 
 
@@ -292,8 +354,6 @@ def google_login(
 ):
     
     """
-    
-
 
 
     token info data example:
@@ -401,7 +461,56 @@ def google_login(
     jwt_tokens = utils.create_auth_session_and_get_jwt_tokens(user_id)
 
 
-    # TODO return user info with jwt_tokens
-    return jwt_tokens
+    user = schemas.UserResponse.parse_obj(db_user.__dict__).dict()
+
+
+    return {
+        "user": user,
+        "jwt_tokens": jwt_tokens
+    }
+
+
+
+
+# TODO reset password
+
+
+
+
+@auth_router.get("/get_user")
+async def get_user(
+    current_user = Depends(get_current_user)
+):
+    u = schemas.UserResponse.parse_obj(current_user.__dict__).dict()
+
+    return u
+
+
+
+# TODO
+@auth_router.post("/refresh_tokens")
+async def refresh_tokens(
+    current_user = Depends(get_current_user),
+    refresh_token: str = fastapi.Body()
+):
+    print(refresh_token)
+
+    pass
+    # refresh_jwt_tokens()
+
+
+@auth_router.post("/logout")
+async def logout(
+    current_user = Depends(get_current_user),
+):
+    pass
+
+
+@auth_router.post("/logout_all")
+async def logout_all(
+    current_user = Depends(get_current_user),
+):
+    pass
+
 
 

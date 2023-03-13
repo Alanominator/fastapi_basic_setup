@@ -22,6 +22,8 @@ def send_activation_link(recipients: Union[str, list], token: str):
         "token": token
     }))
 
+    print(message)
+
 
     send_email(
         message= message,

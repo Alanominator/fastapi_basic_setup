@@ -60,43 +60,67 @@ class ConnectionManager:
         await websocket.send_text(message)
     
 
-    async def broadcast(self, message: str):
+    # async def broadcast(self, message: str):
 
-        # todo broadcast to users of room
-        for connection in self.active_connections:
+    #     for connection in self.active_connections:
             
-            if is_token_time_expired(connection):
-                connection.close()
+    #         if is_token_time_expired(connection):
+    #             connection.close()
 
-            await connection.send_text(message)
+    #         await connection.send_text(message)
 
+
+    async def broadcast_list_of_ws(self, message, list_of_websockets: List[WebSocket]):
+
+        for ws in list_of_websockets:
+            if is_token_time_expired(ws):
+                await ws.close()
+            
+            await ws.send_json(message)
 
 
 
 manager = ConnectionManager()
 
 
+opened_rooms = {
+    # "room_link": ["websocket1", "websocket2"]
+}
 
 user_info_by_websocket = {
-    "id_of_websocket": {
-        "user": {
-            "username": "alan",
-        },
-        "access_token_iat": 1231132,
-    }
+    # "id_of_websocket": {
+    #     "user": {
+    #         "username": "alan",
+    #     },
+    #     "access_token_iat": 1231132,
+    # }
 }
 
 
 def add_or_update_user_info(websocket_id, access_token):
+
+    # awaited
     user = get_user_by_access_token(access_token)
-        
+
     decoded_payload = jwt.decode(
         token = access_token,
         key = SECRET_KEY
     )
+
+
     access_token_iat = decoded_payload["iat"]
 
+
+
+    if not websocket_id in user_info_by_websocket:
+        user_info_by_websocket[websocket_id] = {
+            "user": {},
+            "access_token_iat": 0
+        }
+
+
     user_info_by_websocket[websocket_id]["user"] = user # TODO only certain fields
+
     user_info_by_websocket[websocket_id]["access_token_iat"] = access_token_iat
 
 
@@ -124,6 +148,7 @@ def is_token_time_expired(websocket: WebSocket):
 # ______________________________
 
 async def user_is_typing(websocket: WebSocket, data):
+    
     print("user is typing in ", data["room_link"])
 
     # todo check if user in the room
@@ -156,8 +181,8 @@ actions = {
 
 @chat_router.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
-    # todo
-    access_token = 'todo'
+
+    access_token = websocket.cookies.get("access_token")
 
 
     try:
@@ -166,11 +191,15 @@ async def websocket_endpoint(websocket: WebSocket):
             id(websocket),
             access_token
         )
-
-        # 
+        
         await manager.connect(websocket)
-    except:
-        await websocket.close()
+        
+        # todo add websocket to all user's rooms
+
+    except Exception as e:
+        print(e)
+        return
+    
 
 
 

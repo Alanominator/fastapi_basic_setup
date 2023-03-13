@@ -34,7 +34,7 @@ def isEmailValid(email: str):
 
 
 def isPasswordValid(password: str):
-    if len(password) > 10 and password != "tesla":
+    if len(password) > 8 and password != "tesla":
         return True
     return False
 
@@ -58,9 +58,7 @@ def get_time_has_passed_by_epoch_in_min(epoch: int ):
 def create_auth_session_and_get_jwt_tokens(user_id: int):
     # todo get user where login and password is ///
 
-
     db = SessionLocal()
-
 
     # creating auth_session in database with tmp access jwt token
     db_auth_session = models.AuthSession(

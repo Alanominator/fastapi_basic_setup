@@ -35,6 +35,7 @@ class User(Base):
         return verify_hashed_string(plain_password, self._password_hash)
 
 
+
 class ActivationToken(Base):
     __tablename__ = "activation_tokens"
 
@@ -71,3 +72,13 @@ class AuthSession(Base):
     # TODO -> method
     def verify_access_jwt_token(self, plain_access_jwt_token: str) -> bool:
         return verify_hashed_string(plain_access_jwt_token, self._access_jwt_token_hash)
+
+
+
+
+# class Captcha(models.Model):
+#     value = models.CharField("value", max_length=500)
+#     date = models.DateTimeField(default=timezone.now)
+
+#     def __str__(self):
+#         return self.value

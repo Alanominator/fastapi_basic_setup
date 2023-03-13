@@ -4,16 +4,26 @@ from apps.auth.routers import auth_router
 from apps.chat.routers import chat_router
 
 from core.utils import include_routers
+from fastapi.middleware.cors import CORSMiddleware
 
 
 
 app = FastAPI(
     title="Title",
     description="Description",
-    version="1.0.0",
-    # routers=routers,
-    # middleware=middleware
+    version="1.0.0"
     # todo DOCUMENTATION
+)
+# TODO cors policy
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "*"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 
@@ -28,8 +38,7 @@ include_routers(application=app, routers_to_include=[
 @app.get("/")
 def hello():
     return {
-        "message": "hello world",
-        "docs": "docs is located at '/docs'"
+        "message": "hello world"
     }
 
 

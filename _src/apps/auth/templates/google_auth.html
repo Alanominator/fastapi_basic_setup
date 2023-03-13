@@ -14,37 +14,7 @@
         Wait...
     </h1>
 
-    <script>
-
-        // let a = location.search.substr(1).split("&")
-
-        // function get_search_params_dict() {
-        //     let a = location.search.substr(1)
-
-        //     a = a.split("&")
-
-        //     let params_dict = {}
-
-        //     a.forEach((element, index) => {
-        //         let [k, v] = element.split("=")
-        //         params_dict[k] = v
-        //     })
-
-        //     return params_dict
-        // }
-
-        // let search_params = get_search_params_dict()
-
-        // access_token = search_params["access_token"]
-
-
-        // if (!access_token) {
-        //     document.getElementById("info").innerHTML = "Error"
-        // }
-
-
-
-
+    <script type="text/javascript">
         function get_google_data() {
             let a = location.hash.substr(1)
 
@@ -62,44 +32,20 @@
 
         // http://localhost:8000/users/google_auth_page#state=pass-through%20value&access_token=ya29.a0AeTM1ifLUSdy6tt0l1BJ2AlV1LMfUayCiYbUdFdvdurvnD9FWr5LvsqTOQavagMGT71krcsqAHn-Fv0psK99f4w9pJzNBKKtm01PIZtjcJKTu8rjkEwFnqJiutkCQfudP75rODsPyGA56Erl0Jusk8aYlgXoaCgYKAXASARESFQHWtWOmC0l6qDYnVSofJh_06-xp3A0163&token_type=Bearer&expires_in=3599&scope=email%20profile%20https://www.googleapis.com/auth/userinfo.profile%20https://www.googleapis.com/auth/userinfo.email%20openid&authuser=0&prompt=consent
 
-        let access_token = get_google_data()["access_token"]
 
+        window.addEventListener("load", () => {
+            let access_token = get_google_data()["access_token"];
+            let frontend_url_base = "{{frontend_url_base}}";
 
-            ; (() => {
+            if (!access_token || !frontend_url_base) {
+                document.getElementById("info").innerHTML = "Error";
+                return
+            }
 
-                if (!access_token) {
-                    document.getElementById("info").innerHTML = "Error"
+            let u = frontend_url_base + "/#/users/google_auth?access_token=" + access_token
 
-                    return
-                }
-
-
-                fetch('http://localhost:8000/users/google_login', {
-                    method: 'POST',
-                    headers: {
-                        'accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    // body: '{\n  "access_token": "string"\n}',
-                    body: JSON.stringify({
-                        'access_token': access_token
-                    })
-                })
-                    .then((response) => response.json())
-                    .then((data) => {
-                        console.log(data)
-                        document.getElementById("info").innerHTML = "Done."
-                    })
-                    .catch((err) => {
-                        console.log(err)
-                        document.getElementById("info").innerHTML = JSON.stringify(err)
-                    })
-
-            })();
-
-
-
-
+            location.assign(u)
+        })
 
     </script>
 
