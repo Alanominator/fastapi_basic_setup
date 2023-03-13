@@ -9,15 +9,31 @@ from . import utils
 from core.utils import hash_string, verify_hashed_string
 
 
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(40), unique=True, index=True, nullable=False)
+    # todo username
     is_admin = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(), server_default=func.now(), nullable=False)
     _password_hash = Column("password", String(), nullable=False)
+
+    rooms = relationship(
+        "Room",
+        secondary="room_members",
+        back_populates="members"
+    )
+
+    # todo admin in rooms || rooms under administration
+    admin_in = relationship(
+        "Room",
+        secondary="room_admins",
+        back_populates="admins"
+    )
+
 
     @hybrid_property
     def password(self):

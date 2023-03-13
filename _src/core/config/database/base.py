@@ -17,5 +17,5 @@ Base = declarative_base()
 # -> # register your models here
 # from core.models import *
 from apps.auth.models import *
-
+from apps.chat.models import *
 

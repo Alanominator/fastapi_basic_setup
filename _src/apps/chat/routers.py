@@ -4,6 +4,8 @@ import fastapi
 from fastapi import Depends, Cookie, WebSocket, WebSocketDisconnect
 from typing import List
 
+from core.config.database.database import SessionLocal
+
 # from itsdangerous import exc
 
 
@@ -13,7 +15,7 @@ from ..auth.utils import get_user_by_access_token, get_time_has_passed_by_epoch_
 from jose import jwt
 
 from core.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
-
+from . import schemas
 
 
 chat_router = fastapi.APIRouter(
@@ -38,6 +40,25 @@ send data to rooms (broadcast to user of room that are online)
 
 
 
+
+
+opened_rooms = {
+    # "room_link": ["websocket1", "websocket2"]
+}
+
+# users_info_by_websocket_id
+user_info_by_websocket = {
+    # "id_of_websocket": {
+    #     "user": "user object"
+    #     "db_user": "from database"
+    #     "access_token_iat": 1231132,
+    #     "rooms_links": []
+    # }
+}
+
+
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -50,6 +71,14 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket):
         # TODO remove key from user_info_by_websocket
+
+        user_rooms_links_list = user_info_by_websocket[id(websocket)]["rooms_links"]
+
+        for room_link in user_rooms_links_list:
+            opened_rooms[room_link].remove(websocket)
+
+        del user_info_by_websocket[id(websocket)]
+
         self.active_connections.remove(websocket)
     
 
@@ -70,36 +99,25 @@ class ConnectionManager:
     #         await connection.send_text(message)
 
 
-    async def broadcast_list_of_ws(self, message, list_of_websockets: List[WebSocket]):
+    async def broadcast_list_of_ws(self, list_of_websockets: List[WebSocket], message):
+        print("\n\n\nlist_of_websockets - ", list_of_websockets)
 
         for ws in list_of_websockets:
             if is_token_time_expired(ws):
-                await ws.close()
-            
-            await ws.send_json(message)
+                print("\n\n\n closing connection")
+                # await ws.close()
+            else:
+                await ws.send_json(message)
 
 
 
 manager = ConnectionManager()
 
 
-opened_rooms = {
-    # "room_link": ["websocket1", "websocket2"]
-}
-
-user_info_by_websocket = {
-    # "id_of_websocket": {
-    #     "user": {
-    #         "username": "alan",
-    #     },
-    #     "access_token_iat": 1231132,
-    # }
-}
 
 
 def add_or_update_user_info(websocket_id, access_token):
 
-    # awaited
     user = get_user_by_access_token(access_token)
 
     decoded_payload = jwt.decode(
@@ -110,18 +128,14 @@ def add_or_update_user_info(websocket_id, access_token):
 
     access_token_iat = decoded_payload["iat"]
 
+    
+    user_info_by_websocket[websocket_id] = {
+        # "user": schemas.UserInfoByWS.parse_obj(user.__dict__).dict(),
+        "db_user": user,
+        "access_token_iat": access_token_iat
+    }
 
 
-    if not websocket_id in user_info_by_websocket:
-        user_info_by_websocket[websocket_id] = {
-            "user": {},
-            "access_token_iat": 0
-        }
-
-
-    user_info_by_websocket[websocket_id]["user"] = user # TODO only certain fields
-
-    user_info_by_websocket[websocket_id]["access_token_iat"] = access_token_iat
 
 
 
@@ -148,13 +162,28 @@ def is_token_time_expired(websocket: WebSocket):
 # ______________________________
 
 async def user_is_typing(websocket: WebSocket, data):
-    
-    print("user is typing in ", data["room_link"])
 
     # todo check if user in the room
     # todo broadcast to users of the room "user is typing"
 
-    # await manager.broadcast("user is typing")
+    room_link = data["room_link"]
+
+    if websocket in opened_rooms[room_link]:
+        print("user is typing in ", data["room_link"])
+
+        username = user_info_by_websocket[id(websocket)]["db_user"].email
+
+        await manager.broadcast_list_of_ws(
+            opened_rooms[room_link],
+            {
+                "action": "user_is_typing",
+                "data": {
+                    "room_link": room_link,
+                    "username": username
+                }
+            }
+        )
+
 
 
 async def update_access_token(websocket: WebSocket, data):
@@ -179,10 +208,16 @@ actions = {
 
 
 
-@chat_router.websocket("/")
+@chat_router.websocket(f"/")
 async def websocket_endpoint(websocket: WebSocket):
 
     access_token = websocket.cookies.get("access_token")
+
+    print(websocket.cookies)
+
+    if not access_token:
+        await websocket.close()
+        return
 
 
     try:
@@ -192,23 +227,39 @@ async def websocket_endpoint(websocket: WebSocket):
             access_token
         )
         
+
+        db = SessionLocal()
+
+        user = user_info_by_websocket[id(websocket)]["db_user"]
+
+        db.add(
+            user
+        )
+
+        user_rooms = user.rooms
+
+        for room_link in [r.link for r in user_rooms]:
+            if not room_link in opened_rooms:
+                opened_rooms[room_link] = []
+            opened_rooms[room_link].append(websocket)
+
+        rooms_list = [schemas.RoomResponse.parse_obj(room.__dict__).dict() for room in user_rooms]
+
+        user_info_by_websocket[id(websocket)]["rooms_links"] = [room.link for room in user_rooms]
+
         await manager.connect(websocket)
         
-        # todo add websocket to all user's rooms
+        await websocket.send_json({
+            "action": "update_rooms_list",
+            "data": rooms_list
+        })
+
+        print([schemas.RoomResponse.parse_obj(room.__dict__).dict() for room in user_rooms])
 
     except Exception as e:
         print(e)
         return
     
-
-
-
-    async def run_action(action, data):
-        if action and data:
-            try:
-                await actions[action](websocket, data)
-            except KeyError:
-                print("Unknown action ", action)
 
 
     try:
@@ -218,10 +269,19 @@ async def websocket_endpoint(websocket: WebSocket):
             if is_token_time_expired(websocket):
                 manager.disconnect(websocket)
 
-            await run_action(
-                data["action"],
-                data["data"]
-            )
+            action = data["action"]
+            data = data["data"]
+
+            if action and data:
+                if action in actions:
+                    try:
+                        await actions[action](websocket, data)
+                    except Exception as e:
+                        print(e)
+                else:
+                    print("Unknown action ", action)
+
 
     except WebSocketDisconnect:
+        print("disconnect")
         manager.disconnect(websocket)

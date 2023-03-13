@@ -69,6 +69,7 @@ def get_activation_token_by_token(db: Session, token):
         
     return db_token
 
+
 # def delete_activation_token(db: Session, id):
 
 
