@@ -1,24 +1,22 @@
-import email
-from typing import List
+from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 
 
-# class UserInfoByWS(BaseModel):
-#     email: str
-#     is_admin: str
 
 
 
 
 class RoomResponse(BaseModel):
+    id: str
     name: str
     link: str
+    description: Optional[str or None]
+    # created_at: any
     # members: List
 
-# "room_data": {
-#             //         "name": "Hello world",
-#             //         "link": "qqqq",
-#             //         "photos": [],
-#             //         "members": [],
-#             //     },
+
+
+class TextMessageData(BaseModel):
+    message_type: Literal["text_message"]
+    text: str

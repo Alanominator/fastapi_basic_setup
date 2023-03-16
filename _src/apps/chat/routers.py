@@ -16,6 +16,9 @@ from jose import jwt
 
 from core.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 from . import schemas
+from . import models
+
+
 
 
 chat_router = fastapi.APIRouter(
@@ -23,6 +26,15 @@ chat_router = fastapi.APIRouter(
 )
 
 
+
+"""
+#TODO
+
+room_link -> room_id
+
+left join
+
+"""
 
 
 
@@ -32,6 +44,7 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
         self.websockets_group_by_room = {}
         self.user_info_by_websocket = {}
+        self.opened_groups_by_id = {}
 
 
     async def connect(self, websocket: WebSocket, access_token):
@@ -48,35 +61,50 @@ class ConnectionManager:
             key = SECRET_KEY
         )["iat"]
 
-        # open db session and add user to session
+
         db = SessionLocal()
         db.add(
             user
         )
 
-        # "user rooms" and "user rooms links" variables
-        user_rooms = user.rooms
-        user_rooms_links = [room.link for room in user_rooms]
 
-        # close db session here
-        db.close()
+        user_rooms_list = [
+            schemas.RoomResponse.parse_obj(room.__dict__).dict() 
+                for room in 
+                    db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == 10)
+        ]
+
+        user_rooms_ids = [room["id"] for room in user_rooms_list]
 
         # add websocket to websockets_group_by_rooms
-        for room_link in user_rooms_links:
-            if not room_link in self.websockets_group_by_room:
-                self.websockets_group_by_room[room_link] = []
-            self.websockets_group_by_room[room_link].append(websocket)
+        for room_id in user_rooms_ids:
+            if not room_id in self.websockets_group_by_room:
+                self.websockets_group_by_room[room_id] = []
+            self.websockets_group_by_room[room_id].append(websocket)
+
+        
+        # 
+        # self.opened_groups_by_id
+        for r in user_rooms_list:
+            if not r["id"] in self.opened_groups_by_id:
+                self.opened_groups_by_id[r["id"]] = r
+
+        print(self.opened_groups_by_id)
+
 
         # add user info to "user_info_by_websocket"
         self.user_info_by_websocket[id(websocket)] = {
             "db_user": user,
+            "access_token": access_token,
             "access_token_iat": access_token_iat,
-            "rooms_links": user_rooms_links
+            # "rooms": user_rooms_list,
+            "rooms_ids": user_rooms_ids
         }
 
-        # send "user rooms list" to user
-        # TODO optimize - too much quieres to database
-        user_rooms_list = [schemas.RoomResponse.parse_obj(room.__dict__).dict() for room in user_rooms]
+
+        print(user_rooms_list)
+        
+        db.close()
 
         await manager.send_personal_message(
             websocket,
@@ -85,19 +113,31 @@ class ConnectionManager:
                 "data": user_rooms_list
             }
         )
-
+        
+        
 
     def disconnect(self, websocket: WebSocket):
 
         try:
-            user_rooms_links_list = self.user_info_by_websocket[id(websocket)]["rooms_links"]
+            user_rooms_ids = self.user_info_by_websocket[id(websocket)]["rooms_ids"]
 
-            for room_link in user_rooms_links_list:
-                self.websockets_group_by_room[room_link].remove(websocket)
+            for room_id in user_rooms_ids:
+                # 
+                self.websockets_group_by_room[room_id].remove(websocket)
+
+                if not len(self.websockets_group_by_room[room_id]):
+                    del self.websockets_group_by_room[room_id]
+                
+                    #
+                    del self.opened_groups_by_id[room_id]
+
+
 
             del self.user_info_by_websocket[id(websocket)]
 
             self.active_connections.remove(websocket)
+
+            print(self.opened_groups_by_id)
         except Exception as e:
             print(e)
 
@@ -147,25 +187,45 @@ manager = ConnectionManager()
 # ______________________________
 
 async def update_access_token(websocket: WebSocket, data):
-    
-    access_token = data["access_token"]
 
-    print(access_token)
+    user_info = manager.user_info_by_websocket[id(websocket)]
+
+    new_access_token = data["new_access_token"]
+    current_access_token = user_info["access_token"]
+
+    if new_access_token != current_access_token:
+        
+        # try to get user by access token
+        get_user_by_access_token(new_access_token)
+
+        # get access token issued at field
+        new_access_token_iat = jwt.decode(
+            token = new_access_token,
+            key = SECRET_KEY
+        )["iat"]
+
+        # update access token info
+        user_info["access_token"] = new_access_token
+        user_info["access_token_iat"] = new_access_token_iat
+
+        print("--- OK, token updated")
+
 
 
 
 async def user_is_typing(websocket: WebSocket, data):
 
-    room_link = data["room_link"]
+    room_id = data["room_id"]
+    room_link = manager.opened_groups_by_id[room_id]["link"]
 
-    if websocket in manager.websockets_group_by_room[room_link]:
+    if websocket in manager.websockets_group_by_room[room_id]:
 
         username = manager.user_info_by_websocket[id(websocket)]["db_user"].email # todo username
 
-        print(username + " is typing in ", data["room_link"])
+        print(username + " is typing in ", data["room_id"])
 
         await manager.broadcast_list_of_ws(
-            manager.websockets_group_by_room[room_link],
+            manager.websockets_group_by_room[room_id],
             {
                 "action": "user_is_typing",
                 "data": {
@@ -174,6 +234,22 @@ async def user_is_typing(websocket: WebSocket, data):
                 }
             }
         )
+
+
+
+async def get_last_messages_by_room(websocket: WebSocket, data):
+    room_id = data["room_id"]
+
+    # select * from messages where room_id = 3  order by id desc  limit 15;
+
+
+
+async def get_messages_by_room_with_offset(websocket: WebSocket, data):
+    room_id = data["room_id"]
+    id_offset = data["id_offset"]
+
+    # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
+
 
 
 

@@ -1,6 +1,8 @@
-from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
+
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from core.config.database.base import Base
 
@@ -11,6 +13,7 @@ class RoomMembers(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     room_id = Column(Integer, ForeignKey("rooms.id"), primary_key=True)
+
 
 class RoomAdmins(Base):
     __tablename__ = "room_admins"
@@ -49,6 +52,11 @@ class Room(Base):
         back_populates="room"
     )
 
+    # histories = relationship(
+    #     "RoomHistory", 
+    #     back_populates="room"
+    # )
+
 
 
 
@@ -57,20 +65,77 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True )
+    # if user_id is null, user was deleted
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True )
     user = relationship("User", backref=backref("message", uselist=False ))
 
-    room_id = Column(Integer, ForeignKey("rooms.id"), nullable = False, index = True)
-    room = relationship("Room", backref=backref("message", uselist=False ))
+    room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable = False, index = True)
+    room = relationship("Room", backref=backref("message", uselist=False, cascade="all,delete" ))
 
-    text = Column(Text(), nullable=False)
+    created_at = Column(DateTime(), server_default=func.now(), nullable=False)
 
     edited = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(), server_default=func.now(), nullable=False)
+
+    # TODO message id deleted
+    reply_to_message_id = Column("reply_to_message_id", Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True) # RESTRICT|CASCADE|SET NULL|NO ACTION|SET DEFAULT
+    reply_to_message = relationship("Message", remote_side=[id])
+
+    _message_data = Column("message_data", JSON, nullable=False)
+
+
+    @hybrid_property
+    def message_data(self):
+        return self._message_data
     
-    # todo reply to message, one to one relation
-    # reply_to_message_id = Column("Message", ForeignKey("messages.id"), nullable=True)
-    # reply_to_message = relationship("Message", )
+
+    @message_data.setter
+    def message_data(self, data):
+        if self.validate_message_data(data):
+            self._message_data = data
+            return
+        raise Exception("data is not valid")
+    
+
+    def validate_message_data(self, data):
+        # True or False
+        return isinstance(data, dict)
 
 
 
+# class RoomHistory(Base):
+#     """
+#     contains all room history, for example:
+#     - deletions_messages
+#     - changes_messages
+#     """
+
+#     __tablename__ = "rooms_histories"
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+
+#     room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable = True, index = True)
+#     room = relationship("Room", backref=backref("history", uselist=False, cascade="all,delete" ))
+
+#     _data = Column("data", JSON, nullable=False)
+
+#     @hybrid_property
+#     def data(self):
+#         return self.data
+        
+
+#     @data.setter
+#     def data(self, new_data):
+#         if self.validate_message_data(new_data):
+#             self._data = new_data
+#             return
+#         raise Exception("data is not valid")
+        
+
+#     def validate_data(self, new_data):
+#         # True or False
+#         return isinstance(new_data, dict)
+
+
+
+# 
+# (id - 28) + 1

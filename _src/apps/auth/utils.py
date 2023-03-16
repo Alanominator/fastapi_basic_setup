@@ -143,6 +143,7 @@ def create_jwt_tokens(
 
 
 def get_user_by_access_token(access_token: str):
+    # TODO return user or None
 
     try:
         decoded_payload = jwt.decode(

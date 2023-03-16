@@ -10,6 +10,7 @@ from . import crud
 from . import schemas
 from . import utils
 from . import tasks
+from . import models
 
 import urllib.parse
 
@@ -29,6 +30,9 @@ from retry import retry
 import requests
 
 from fastapi.responses import HTMLResponse
+
+from core.utils import encrypt_string, decrypt_string
+from jose import jwt
 
 
 
@@ -106,12 +110,11 @@ async def register_user(*,
     user: schemas.UserCreate = fastapi.Body(),
     db: Session = Depends(get_db)
 ):
-    # todo recaptcha
 
     errors_to_send = []
 
 
-
+    # todo recaptcha
         #     try:
         #     if not captcha_value:
         #         raise
@@ -215,7 +218,7 @@ async def activate_user(*,
     db.commit()
 
 
-    # TODO redirect response
+    # TODO redirect to frontend
     return {
         "hello": f"Your account has been activated"
     }
@@ -255,7 +258,6 @@ async def login(
     user = schemas.UserResponse.parse_obj(db_user.__dict__).dict()
 
 
-    # TODO return user info with jwt_tokens
     return {
         "user": user,
         "jwt_tokens": jwt_tokens
@@ -491,26 +493,57 @@ async def get_user(
 @auth_router.post("/refresh_tokens")
 async def refresh_tokens(
     current_user = Depends(get_current_user),
-    refresh_token: str = fastapi.Body()
+    refresh_token: str = fastapi.Body(embed=True)
 ):
-    print(refresh_token)
+    new_jwt_tokens = utils.refresh_jwt_tokens(refresh_token)
 
-    pass
-    # refresh_jwt_tokens()
+    return {
+        "user": current_user,
+        "jwt_tokens": new_jwt_tokens
+    }
 
 
 @auth_router.post("/logout")
 async def logout(
     current_user = Depends(get_current_user),
+    access_token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
 ):
-    pass
+    print(access_token)
+
+    decoded_payload = jwt.decode(
+        token = access_token,
+        key = settings.SECRET_KEY
+    )
+
+    current_session_id = decrypt_string(decoded_payload["session_id"])
+
+    # todo optimize - we make two quieries to database
+    current_session = db.query(models.AuthSession).where(
+        models.AuthSession.id == current_session_id
+    ).first()
+
+    db.delete(current_session)
+    db.commit()
+
+
+    return {}
 
 
 @auth_router.post("/logout_all")
 async def logout_all(
     current_user = Depends(get_current_user),
+    access_token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
 ):
-    pass
+
+    db.query(models.AuthSession).filter(
+        models.AuthSession.user_id == current_user.id
+    ).delete()
+
+    db.commit()
+
+    return {}
 
 
 

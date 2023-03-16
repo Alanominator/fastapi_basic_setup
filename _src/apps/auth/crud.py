@@ -54,12 +54,14 @@ def create_activation_token(db: Session, user_id: int):
     return db_token
 
 
+
 def get_activation_token_by_user_id(db: Session, user_id):
     db_token = db.query(models.ActivationToken).\
         filter(models.ActivationToken.user_id == user_id).\
             first()
 
     return db_token
+
 
 
 def get_activation_token_by_token(db: Session, token):

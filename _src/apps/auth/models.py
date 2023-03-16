@@ -21,11 +21,19 @@ class User(Base):
     created_at = Column(DateTime(), server_default=func.now(), nullable=False)
     _password_hash = Column("password", String(), nullable=False)
 
+
+    # todo
+    auth_sessions = relationship(
+        "AuthSession",
+        back_populates="user"
+    )
+
     rooms = relationship(
         "Room",
         secondary="room_members",
         back_populates="members"
     )
+
 
     # todo admin in rooms || rooms under administration
     admin_in = relationship(
@@ -69,7 +77,10 @@ class AuthSession(Base):
     __tablename__ = "auth_sessions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable = False, index = True)
+
+    user = relationship("User", backref=backref("auth_session", uselist=False, cascade="all,delete" ))
 
     _access_jwt_token_hash = Column("access_jwt_token", String(), nullable = False)
 
