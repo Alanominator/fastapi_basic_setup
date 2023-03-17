@@ -71,7 +71,7 @@ class ConnectionManager:
         user_rooms_list = [
             schemas.RoomResponse.parse_obj(room.__dict__).dict() 
                 for room in 
-                    db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == 10)
+                    db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == user.id)
         ]
 
         user_rooms_ids = [room["id"] for room in user_rooms_list]
@@ -239,14 +239,64 @@ async def user_is_typing(websocket: WebSocket, data):
 
 async def get_last_messages_by_room(websocket: WebSocket, data):
     room_id = data["room_id"]
+    count = data["count"]
 
-    # select * from messages where room_id = 3  order by id desc  limit 15;
+    # restriction
+    if count > 30:
+        count = 30
+
+    if not (room_id in manager.user_info_by_websocket[id(websocket)]["rooms_ids"]):
+        return
+
+    db = SessionLocal()
+    
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict(), "date": "fake_date", "username": "alan"}
+        for msg in
+            db.query(models.Message).where(models.Room.id == 3).order_by(models.Message.id.desc()).limit(count)
+    ] # TODO room id
+
+    await manager.send_personal_message(websocket,
+        {
+            "action": "add_messages_to_room",
+            "data": {
+                "room_link": manager.opened_groups_by_id[room_id]["link"],
+                "messages": messages
+            }
+        }
+    )
 
 
 
 async def get_messages_by_room_with_offset(websocket: WebSocket, data):
     room_id = data["room_id"]
-    id_offset = data["id_offset"]
+    offset_id = data["offset_id"]
+    count = data["count"]
+
+    print(offset_id)
+
+    # restriction
+    if count > 30:
+        count = 30
+
+    if not (room_id in manager.user_info_by_websocket[id(websocket)]["rooms_ids"]):
+        return
+
+    db = SessionLocal()
+    
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict(), "date": "fake_date", "username": "alan"}
+        for msg in
+            db.query(models.Message).where(models.Room.id == 3).where(models.Message.id < offset_id).order_by(models.Message.id.desc()).limit(count)
+    ] # TODO room id
+
+    await manager.send_personal_message(websocket,
+        {
+            "action": "add_messages_to_room",
+            "data": {
+                "room_link": manager.opened_groups_by_id[room_id]["link"],
+                "messages": messages
+            }
+        }
+    )
 
     # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
 
@@ -257,6 +307,8 @@ async def get_messages_by_room_with_offset(websocket: WebSocket, data):
 actions = {
     "user_is_typing": user_is_typing,
     "update_access_token": update_access_token,
+    "get_last_messages_by_room": get_last_messages_by_room,
+    "get_messages_by_room_with_offset": get_messages_by_room_with_offset
 }
 
 

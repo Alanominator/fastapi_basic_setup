@@ -74,32 +74,13 @@ class Message(Base):
 
     created_at = Column(DateTime(), server_default=func.now(), nullable=False)
 
-    edited = Column(Boolean, default=False, nullable=False)
+    edited = Column(Boolean, default=False, nullable=False) # TODO server default False
 
     # TODO message id deleted
     reply_to_message_id = Column("reply_to_message_id", Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True) # RESTRICT|CASCADE|SET NULL|NO ACTION|SET DEFAULT
     reply_to_message = relationship("Message", remote_side=[id])
 
-    _message_data = Column("message_data", JSON, nullable=False)
-
-
-    @hybrid_property
-    def message_data(self):
-        return self._message_data
-    
-
-    @message_data.setter
-    def message_data(self, data):
-        if self.validate_message_data(data):
-            self._message_data = data
-            return
-        raise Exception("data is not valid")
-    
-
-    def validate_message_data(self, data):
-        # True or False
-        return isinstance(data, dict)
-
+    message_data = Column("message_data", JSON, nullable=False)
 
 
 # class RoomHistory(Base):
