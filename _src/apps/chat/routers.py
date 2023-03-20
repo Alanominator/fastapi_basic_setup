@@ -5,6 +5,11 @@ from fastapi import Depends, Cookie, WebSocket, WebSocketDisconnect
 from typing import List
 
 from core.config.database.database import SessionLocal
+from ..auth.routers import get_current_user
+
+from sqlalchemy.orm import Session
+
+from core.config.database.utils import get_db
 
 # from itsdangerous import exc
 
@@ -12,6 +17,9 @@ from core.config.database.database import SessionLocal
 from ..auth.utils import get_user_by_access_token, get_time_has_passed_by_epoch_in_min
 
 
+from fastapi.responses import JSONResponse, RedirectResponse
+
+from fastapi import Depends, HTTPException, status
 from jose import jwt
 
 from core.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
@@ -148,7 +156,7 @@ class ConnectionManager:
         if self.is_token_time_expired_by_websocket(websocket):
             websocket.close()
 
-        await websocket.send_json(message)
+        await websocket.send_text(json.dumps(message, default=str))
 
 
     async def broadcast_list_of_ws(self, list_of_websockets: List[WebSocket], message):
@@ -158,7 +166,7 @@ class ConnectionManager:
                 print("\n\n\n closing connection")
                 await ws.close()
             else:
-                await ws.send_json(message)
+                await ws.send_text(json.dumps(message, default=str))
 
 
     def is_token_time_expired_by_websocket(self, websocket: WebSocket) -> bool:
@@ -212,7 +220,6 @@ async def update_access_token(websocket: WebSocket, data):
 
 
 
-
 async def user_is_typing(websocket: WebSocket, data):
 
     room_id = data["room_id"]
@@ -225,7 +232,7 @@ async def user_is_typing(websocket: WebSocket, data):
         print(username + " is typing in ", data["room_id"])
 
         await manager.broadcast_list_of_ws(
-            manager.websockets_group_by_room[room_id],
+            [ws for ws in manager.websockets_group_by_room[room_id] if ws != websocket],
             {
                 "action": "user_is_typing",
                 "data": {
@@ -250,10 +257,24 @@ async def get_last_messages_by_room(websocket: WebSocket, data):
 
     db = SessionLocal()
     
-    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict(), "date": "fake_date", "username": "alan"}
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
         for msg in
-            db.query(models.Message).where(models.Room.id == 3).order_by(models.Message.id.desc()).limit(count)
-    ] # TODO room id
+            db.query(models.Message).where(models.Message.room_id == room_id).order_by(models.Message.id.desc()).limit(count)
+    ]
+
+
+
+    """
+    SELECT messages.*, rooms.link AS room_link 
+    FROM messages 
+    JOIN rooms ON messages.room_id = rooms.id
+    WHERE messages.room_id = 197
+    ORDER BY messages.id DESC 
+    LIMIT 15;
+    
+    """
+
+
 
     await manager.send_personal_message(websocket,
         {
@@ -283,10 +304,12 @@ async def get_messages_by_room_with_offset(websocket: WebSocket, data):
 
     db = SessionLocal()
     
-    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict(), "date": "fake_date", "username": "alan"}
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
         for msg in
-            db.query(models.Message).where(models.Room.id == 3).where(models.Message.id < offset_id).order_by(models.Message.id.desc()).limit(count)
-    ] # TODO room id
+            db.query(models.Message).where(models.Message.room_id == room_id).where(models.Message.id < offset_id).order_by(models.Message.id.desc()).limit(count)
+    ]
+
+    print("\n", messages)
 
     await manager.send_personal_message(websocket,
         {
@@ -298,9 +321,85 @@ async def get_messages_by_room_with_offset(websocket: WebSocket, data):
         }
     )
 
+    """
+    SELECT messages.*, rooms.link AS room_link 
+    FROM messages 
+    JOIN rooms ON messages.room_id = rooms.id
+    WHERE messages.room_id = 197 AND messages.id < 1514323232
+    ORDER BY messages.id DESC 
+    LIMIT 15;
+    
+    """
+    # select messages.*, rooms.link as room_link from messages join rooms on messages.room_id = rooms.id;
     # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
 
 
+
+async def connect_to_room(websocket: WebSocket, data):
+    room_link = data["room_link"]
+
+
+
+async def load_data(websocket: WebSocket, data):
+    data = data
+
+    print("\n\n")
+    # print(data)
+
+    db = SessionLocal()
+    for room_id in data.keys():
+        d = data[room_id]
+
+
+        # if is user is not in this group, ignore
+        if not websocket in manager.websockets_group_by_room[room_id]:
+            continue
+
+
+        if "messages_to_create" in d:
+            messages = []
+
+            for x in d['messages_to_create']:
+                m = models.Message(
+                    user_id = manager.user_info_by_websocket[id(websocket)]["db_user"].id,
+                    room_id = room_id,
+                    message_data = {
+                        "message_type": x["message_type"],
+                        "text": x["text"]
+                    }
+                )
+                # ! 
+                # TODO OPTIMIZE
+                db.add(m)
+                db.commit()
+                db.refresh(m)
+                
+                messages.append(
+                    schemas.MessageResponse.parse_obj(m.__dict__).dict()
+                )
+
+
+            await manager.broadcast_list_of_ws(manager.websockets_group_by_room[room_id],
+                {
+                "action": "add_messages_to_room",
+                    "data": {
+                        "room_link": manager.opened_groups_by_id[room_id]["link"],
+                        "messages": messages
+                    }
+                }
+            )
+        # _______
+
+        # for x in d['messages_ids_to_delete']:
+        #     pass
+        #     # print(m)
+        
+        # for x in d['messages_to_edit']:
+        #     pass
+        #     # print(m)
+    
+
+    db.close()
 
 
 
@@ -308,7 +407,9 @@ actions = {
     "user_is_typing": user_is_typing,
     "update_access_token": update_access_token,
     "get_last_messages_by_room": get_last_messages_by_room,
-    "get_messages_by_room_with_offset": get_messages_by_room_with_offset
+    "get_messages_by_room_with_offset": get_messages_by_room_with_offset,
+    "connect_to_room": connect_to_room,
+    "load_data": load_data
 }
 
 
@@ -355,3 +456,43 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         print("disconnect")
         manager.disconnect(websocket)
+
+
+
+@chat_router.get("/get_room_data/")
+async def get_room_data(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    room_link: str
+):
+    if not room_link:
+        return JSONResponse(
+            status_code = 404,
+            content ={
+                "error_message": "Room is not found"
+            }
+        )
+
+    r = db.query(models.Room).\
+        filter(models.Room.link == room_link).\
+            first()
+
+    if r:
+        return JSONResponse(
+        status_code = 200,
+        content = {
+            "room_data": {
+                "id": 999,
+                "link": r.link,
+                "name": r.name
+            }
+        }
+    )
+
+    return JSONResponse(
+        status_code = 404,
+        content ={
+            "error_message": "Room is not found"
+        }
+    )

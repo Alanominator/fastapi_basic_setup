@@ -27,7 +27,9 @@ ASYNC_SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://gwen@localhost/fast_lms"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     future=True,
-    echo=True
+    echo=True,
+    pool_size=9999,
+    max_overflow=9999
 )
 
 async_engine = create_async_engine(

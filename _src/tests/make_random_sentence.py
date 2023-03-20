@@ -1,19 +1,14 @@
 import random
 from .lorem_words import lorem_words
 
-def make_sentence(length=None):
+def make_random_sentence(length=None):
     if length == None:
-        length = random.choice([*range(5, 10)])
+        length = random.choice([*range(5, 7)])
     
     x = ""
     for i in range(length):
-        x += random.choice(lorem_words)
+        x += random.choice(lorem_words)[:5]
         x += " "
     
     return x
 
-
-if __name__ == "__main__":
-    print(
-        make_sentence(2)
-    )

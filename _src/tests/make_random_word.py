@@ -1,7 +1,7 @@
 import random
 from .letters import letters
 
-def create_random_link():
+def make_random_word():
     link_length = random.choice([*range(6, 14)])
 
     x = ""
@@ -10,5 +10,3 @@ def create_random_link():
 
     return x
 
-
-print(create_random_link())

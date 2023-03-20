@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON
+from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON, text, Date, Time
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, backref
 
@@ -31,6 +31,7 @@ class Room(Base):
     name = Column(String(20), nullable=False)
     link = Column(String(20), unique=True, index=True, nullable=False)
     created_at = Column(DateTime(), server_default=func.now(), nullable=False)
+    # todo rename to date
 
     description = Column(Text()) # 100
     # TODO photos
@@ -72,9 +73,10 @@ class Message(Base):
     room_id = Column(Integer, ForeignKey("rooms.id", ondelete="CASCADE"), nullable = False, index = True)
     room = relationship("Room", backref=backref("message", uselist=False, cascade="all,delete" ))
 
-    created_at = Column(DateTime(), server_default=func.now(), nullable=False)
+    date = Column(Date(), server_default=func.now(), nullable=False)
+    time = Column(Time(), server_default=func.now(), nullable=False)
 
-    edited = Column(Boolean, default=False, nullable=False) # TODO server default False
+    edited = Column(Boolean, nullable=False, default=False) # TODO server default False
 
     # TODO message id deleted
     reply_to_message_id = Column("reply_to_message_id", Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True) # RESTRICT|CASCADE|SET NULL|NO ACTION|SET DEFAULT
