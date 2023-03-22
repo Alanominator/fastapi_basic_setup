@@ -1,4 +1,5 @@
 from asyncio import sleep
+from decimal import DivisionByZero
 import json
 import fastapi
 from fastapi import Depends, Cookie, WebSocket, WebSocketDisconnect
@@ -49,6 +50,19 @@ left join
 
 class ConnectionManager:
     def __init__(self):
+        """
+        
+        [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>]
+        
+        {'1': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '2': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '4': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '5': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '6': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '7': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '9': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '10': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '12': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '13': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '18': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '19': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '21': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '25': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '26': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>]}
+        
+        {140039089610656: {'db_user': <apps.auth.models.User object at 0x7f5d6432c130>, 'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJzZXNzaW9uX2lkIjoiZ0FBQUFBQmtHWXFoSlo4ZW9LbXVIUUVvOERpVUlCT1NybC16WkdRMXA0ZkROUnZfNTVkOHhMc1IybzhiVERQTGlZTWthOUdrY2Rpc1FZTXNyNEQzRzZwekhWWkhYUjYtdUE9PSIsImlhdCI6MTY3OTM5NTQ4OSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.cX4yBiAxTBg7p5kAGmrGxZmHfQV4AZOa_D04Pjz8m1I', 'access_token_iat': 1679395489, 'rooms_ids': ['1', '2', '4', '5', '6', '7', '9', '10', '12', '13', '18', '19', '21', '25', '26']}}
+        
+        {'1': {'id': '1', 'name': 'autem ', 'link': 'kyejfdabbfbxa', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '2': {'id': '2', 'name': 'persp ', 'link': 'tfssufznfqyj', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '4': {'id': '4', 'name': 'volup optio ', 'link': 'upderdxp', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '5': {'id': '5', 'name': 'Saepe ', 'link': 'yyxvdtgw', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '6': {'id': '6', 'name': 'maior accus ', 'link': 'ejwiplagdjux', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '7': {'id': '7', 'name': 'error ', 'link': 'zcwikinxndp', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '9': {'id': '9', 'name': 'dolor ', 'link': 'wotufbn', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '10': {'id': '10', 'name': 'rem ', 'link': 'mbodbirwql', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 34, 51, 338597)}, '12': {'id': '12', 'name': 'exerc ', 'link': 'yerkvqninp', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 35, 20, 519312)}, '13': {'id': '13', 'name': 'saepe at ', 'link': 'rkbfnex', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 35, 20, 519312)}, '18': {'id': '18', 'name': 'magni venia ', 'link': 'scvtevyginhen', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 35, 20, 519312)}, '19': {'id': '19', 'name': 'Molli ', 'link': 'nmkeiarflf', 'description': None, 'created_at': datetime.datetime(2023, 3, 20, 13, 35, 20, 519312)}, '21': {'id': '21', 'name': 'provi ', 'link': 'rvstzgrfjo', 'description': None, 'created_at': datetime.datetime(2023, 3, 21, 10, 24, 18, 633202)}, '25': {'id': '25', 'name': 'enim, ', 'link': 'cgavyul', 'description': None, 'created_at': datetime.datetime(2023, 3, 21, 10, 24, 18, 633202)}, '26': {'id': '26', 'name': 'iusto ', 'link': 'uizzlhdlxml', 'description': None, 'created_at': datetime.datetime(2023, 3, 21, 10, 24, 18, 633202)}}
+
+
+        
+        """
         self.active_connections: List[WebSocket] = []
         self.websockets_group_by_room = {}
         self.user_info_by_websocket = {}
@@ -69,59 +83,18 @@ class ConnectionManager:
             key = SECRET_KEY
         )["iat"]
 
-
-        db = SessionLocal()
-        db.add(
-            user
-        )
-
-
-        user_rooms_list = [
-            schemas.RoomResponse.parse_obj(room.__dict__).dict() 
-                for room in 
-                    db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == user.id)
-        ]
-
-        user_rooms_ids = [room["id"] for room in user_rooms_list]
-
-        # add websocket to websockets_group_by_rooms
-        for room_id in user_rooms_ids:
-            if not room_id in self.websockets_group_by_room:
-                self.websockets_group_by_room[room_id] = []
-            self.websockets_group_by_room[room_id].append(websocket)
-
-        
-        # 
-        # self.opened_groups_by_id
-        for r in user_rooms_list:
-            if not r["id"] in self.opened_groups_by_id:
-                self.opened_groups_by_id[r["id"]] = r
-
-        print(self.opened_groups_by_id)
-
-
-        # add user info to "user_info_by_websocket"
         self.user_info_by_websocket[id(websocket)] = {
             "db_user": user,
             "access_token": access_token,
             "access_token_iat": access_token_iat,
-            # "rooms": user_rooms_list,
-            "rooms_ids": user_rooms_ids
+            "rooms_ids": []
         }
 
 
-        print(user_rooms_list)
+        # ! -------
+        await update_rooms_list(websocket, {})
         
-        db.close()
-
-        await manager.send_personal_message(
-            websocket,
-            {
-                "action": "update_rooms_list",
-                "data": user_rooms_list
-            }
-        )
-        
+        # !___________
         
 
     def disconnect(self, websocket: WebSocket):
@@ -135,10 +108,7 @@ class ConnectionManager:
 
                 if not len(self.websockets_group_by_room[room_id]):
                     del self.websockets_group_by_room[room_id]
-                
-                    #
                     del self.opened_groups_by_id[room_id]
-
 
 
             del self.user_info_by_websocket[id(websocket)]
@@ -198,8 +168,8 @@ async def update_access_token(websocket: WebSocket, data):
 
     user_info = manager.user_info_by_websocket[id(websocket)]
 
-    new_access_token = data["new_access_token"]
     current_access_token = user_info["access_token"]
+    new_access_token = data["new_access_token"]
 
     if new_access_token != current_access_token:
         
@@ -220,9 +190,54 @@ async def update_access_token(websocket: WebSocket, data):
 
 
 
+async def update_rooms_list(websocket: WebSocket, data):
+    print("\n\n\n\n\tUPDATE ROOMS LIST\n\n\n")
+
+    db = SessionLocal()
+
+    user = manager.user_info_by_websocket[id(websocket)]["db_user"]
+
+    user_rooms_list = [
+        schemas.RoomResponse.parse_obj(room.__dict__).dict() 
+            for room in 
+                db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == user.id)
+    ]
+
+    db.close()
+
+    user_rooms_ids = [room["id"] for room in user_rooms_list]
+
+    # add websocket to websockets_group_by_rooms
+    for room_id in user_rooms_ids:
+        if not room_id in manager.websockets_group_by_room:
+            manager.websockets_group_by_room[room_id] = []
+        manager.websockets_group_by_room[room_id].append(websocket)
+
+
+    # self.opened_groups_by_id
+    for r in user_rooms_list:
+        if not r["id"] in manager.opened_groups_by_id:
+            manager.opened_groups_by_id[r["id"]] = r
+
+
+    # add user info to "user_info_by_websocket"
+    manager.user_info_by_websocket[id(websocket)]["rooms_ids"] = user_rooms_ids
+
+
+    await manager.send_personal_message(
+        websocket,
+        {
+            "action": "update_rooms_list",
+            "data": user_rooms_list
+        }
+    )
+
+
+
 async def user_is_typing(websocket: WebSocket, data):
 
     room_id = data["room_id"]
+
     room_link = manager.opened_groups_by_id[room_id]["link"]
 
     if websocket in manager.websockets_group_by_room[room_id]:
@@ -245,7 +260,7 @@ async def user_is_typing(websocket: WebSocket, data):
 
 
 async def get_last_messages_by_room(websocket: WebSocket, data):
-    room_id = data["room_id"]
+    room_id = str(data["room_id"])
     count = data["count"]
 
     # restriction
@@ -255,13 +270,13 @@ async def get_last_messages_by_room(websocket: WebSocket, data):
     if not (room_id in manager.user_info_by_websocket[id(websocket)]["rooms_ids"]):
         return
 
+
     db = SessionLocal()
     
     messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
         for msg in
             db.query(models.Message).where(models.Message.room_id == room_id).order_by(models.Message.id.desc()).limit(count)
     ]
-
 
 
     """
@@ -335,16 +350,8 @@ async def get_messages_by_room_with_offset(websocket: WebSocket, data):
 
 
 
-async def connect_to_room(websocket: WebSocket, data):
-    room_link = data["room_link"]
-
-
-
 async def load_data(websocket: WebSocket, data):
     data = data
-
-    print("\n\n")
-    # print(data)
 
     db = SessionLocal()
     for room_id in data.keys():
@@ -403,15 +410,16 @@ async def load_data(websocket: WebSocket, data):
 
 
 
+# ___________________
 actions = {
     "user_is_typing": user_is_typing,
     "update_access_token": update_access_token,
+    "update_rooms_list": update_rooms_list,
     "get_last_messages_by_room": get_last_messages_by_room,
     "get_messages_by_room_with_offset": get_messages_by_room_with_offset,
-    "connect_to_room": connect_to_room,
     "load_data": load_data
 }
-
+# _______________________________
 
 
 
@@ -440,17 +448,17 @@ async def websocket_endpoint(websocket: WebSocket):
             if manager.is_token_time_expired_by_websocket(websocket):
                 manager.disconnect(websocket)
 
-            action = data["action"]
-            data = data["data"]
 
-            if action and data:
-                if action in actions:
+            if "action" in data and "data" in data:
+                if data["action"] in actions:
                     try:
-                        await actions[action](websocket, data)
-                    except Exception as e:
+                        await actions[
+                            data["action"]
+                        ](websocket, data["data"])
+                    except DivisionByZero as e:
                         print(e)
                 else:
-                    print("Unknown action ", action)
+                    print("Unknown action ", data["action"])
 
 
     except WebSocketDisconnect:
@@ -458,6 +466,8 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
+
+# HTTP routes ____________________________
 
 @chat_router.get("/get_room_data/")
 async def get_room_data(
@@ -478,15 +488,15 @@ async def get_room_data(
         filter(models.Room.link == room_link).\
             first()
 
+
     if r:
         return JSONResponse(
         status_code = 200,
         content = {
-            "room_data": {
-                "id": 999,
-                "link": r.link,
-                "name": r.name
-            }
+            "room_data": json.dumps(
+                    schemas.RoomResponse.parse_obj(r.__dict__).dict(),
+                    default=str
+                )
         }
     )
 
@@ -496,3 +506,69 @@ async def get_room_data(
             "error_message": "Room is not found"
         }
     )
+
+
+
+
+@chat_router.get("/join_room/")
+async def join_room(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    room_link: str
+):
+    if not room_link:
+        return JSONResponse(
+            status_code = 404,
+            content ={
+                "error_message": "Room is not found"
+            }
+        )
+
+    r = db.query(models.Room).\
+        filter(models.Room.link == room_link).\
+            first()
+
+
+    if r:
+        exists = db.query(models.RoomMembers).\
+        filter(models.RoomMembers.room_id == r.id).\
+            filter(models.RoomMembers.user_id == current_user.id).\
+            first()
+
+        if not exists:
+            new_room_members_relation = models.RoomMembers(
+                user_id = current_user.id,
+                room_id = r.id
+            )
+            db.add(new_room_members_relation)
+            db.commit()
+
+        return JSONResponse(
+        status_code = 200,
+
+        # TODO
+        content = {
+            "message": "success"
+        }
+    )
+
+    return JSONResponse(
+        status_code = 404,
+        content ={
+            "error_message": "Room is not found"
+        }
+    )
+
+
+
+
+@chat_router.get("/chat_with_me/")
+async def chat_with_me(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # todo
+    return {}
+    pass

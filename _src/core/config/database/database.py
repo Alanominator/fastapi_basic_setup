@@ -28,6 +28,7 @@ engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     future=True,
     echo=True,
+    # TODO
     pool_size=9999,
     max_overflow=9999
 )
