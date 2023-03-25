@@ -92,7 +92,7 @@ def main():
     # create random messages
     used = [[x.user_id, x.room_id] for x in list(db.query(chat_models.RoomMembers))]
 
-    for i in range(2000):
+    for i in range(3000):
         x = random.choice(used)
         print(x)
 
@@ -114,34 +114,3 @@ if __name__ == "__main__":
     main()
     
     print("\n[+] Database filled")
-
-    # db.query(models.Room).join(models.RoomMembers).where(models.Room.id == models.RoomMembers.room_id).where(models.RoomMembers.user_id == user.id)
-
-    """
-
-    SELECT messages.*, rooms.link AS room_link 
-    FROM messages 
-    JOIN rooms ON messages.room_id = rooms.id
-    WHERE messages.room_id = 197 
-    AND messages.id < 49000
-    ORDER BY messages.id DESC 
-    LIMIT 15;
-    
-    """
-    print(
-        json.dumps(
-            [x.__dict__ for x in
-                list(
-                    db.query(chat_models.Message)
-                        .join(chat_models.Room)
-                        .where(chat_models.Message.room_id == chat_models.Room.id)
-                        .where(chat_models.Message.room_id == 197)
-                        .order_by(chat_models.Message.id.desc())
-                        .limit(15)
-                )
-            ],
-            indent=4,
-            default=str
-        )
-    )
-    

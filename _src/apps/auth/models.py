@@ -67,7 +67,7 @@ class ActivationToken(Base):
     
     token = Column(String(32), nullable=False, default = lambda : utils.gen_string(32) )
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True )
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True )
     user = relationship("User", backref=backref("activation_token", uselist=False, cascade="all,delete" ))
 
 
@@ -78,7 +78,7 @@ class AuthSession(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable = False, index = True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable = False, index = True)
 
     user = relationship("User", backref=backref("auth_session", uselist=False, cascade="all,delete" ))
 

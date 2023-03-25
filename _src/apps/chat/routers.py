@@ -26,6 +26,7 @@ from jose import jwt
 from core.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 from . import schemas
 from . import models
+from .. import auth
 
 
 
@@ -52,8 +53,6 @@ class ConnectionManager:
     def __init__(self):
         """
         
-        [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>]
-        
         {'1': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '2': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '4': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '5': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '6': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '7': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '9': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '10': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '12': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '13': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '18': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '19': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '21': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '25': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>], '26': [<starlette.websockets.WebSocket object at 0x7f5d6430dfa0>]}
         
         {140039089610656: {'db_user': <apps.auth.models.User object at 0x7f5d6432c130>, 'access_token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJzZXNzaW9uX2lkIjoiZ0FBQUFBQmtHWXFoSlo4ZW9LbXVIUUVvOERpVUlCT1NybC16WkdRMXA0ZkROUnZfNTVkOHhMc1IybzhiVERQTGlZTWthOUdrY2Rpc1FZTXNyNEQzRzZwekhWWkhYUjYtdUE9PSIsImlhdCI6MTY3OTM5NTQ4OSwic3ViIjoiYWNjZXNzX3Rva2VuIn0.cX4yBiAxTBg7p5kAGmrGxZmHfQV4AZOa_D04Pjz8m1I', 'access_token_iat': 1679395489, 'rooms_ids': ['1', '2', '4', '5', '6', '7', '9', '10', '12', '13', '18', '19', '21', '25', '26']}}
@@ -63,7 +62,7 @@ class ConnectionManager:
 
         
         """
-        self.active_connections: List[WebSocket] = []
+
         self.websockets_group_by_room = {}
         self.user_info_by_websocket = {}
         self.opened_groups_by_id = {}
@@ -72,12 +71,10 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, access_token):
         await websocket.accept()
 
-        self.active_connections.append(websocket)
-
         # get user by access token
         user = get_user_by_access_token(access_token)
 
-        # get access token issued at field
+        # # get access token issued at field
         access_token_iat = jwt.decode(
             token = access_token,
             key = SECRET_KEY
@@ -91,10 +88,7 @@ class ConnectionManager:
         }
 
 
-        # ! -------
         await update_rooms_list(websocket, {})
-        
-        # !___________
         
 
     def disconnect(self, websocket: WebSocket):
@@ -113,7 +107,7 @@ class ConnectionManager:
 
             del self.user_info_by_websocket[id(websocket)]
 
-            self.active_connections.remove(websocket)
+            # self.active_connections.remove(websocket)
 
             print(self.opened_groups_by_id)
         except Exception as e:
@@ -259,97 +253,6 @@ async def user_is_typing(websocket: WebSocket, data):
 
 
 
-async def get_last_messages_by_room(websocket: WebSocket, data):
-    room_id = str(data["room_id"])
-    count = data["count"]
-
-    # restriction
-    if count > 30:
-        count = 30
-
-    if not (room_id in manager.user_info_by_websocket[id(websocket)]["rooms_ids"]):
-        return
-
-
-    db = SessionLocal()
-    
-    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
-        for msg in
-            db.query(models.Message).where(models.Message.room_id == room_id).order_by(models.Message.id.desc()).limit(count)
-    ]
-
-
-    """
-    SELECT messages.*, rooms.link AS room_link 
-    FROM messages 
-    JOIN rooms ON messages.room_id = rooms.id
-    WHERE messages.room_id = 197
-    ORDER BY messages.id DESC 
-    LIMIT 15;
-    
-    """
-
-
-
-    await manager.send_personal_message(websocket,
-        {
-            "action": "add_messages_to_room",
-            "data": {
-                "room_link": manager.opened_groups_by_id[room_id]["link"],
-                "messages": messages
-            }
-        }
-    )
-
-
-
-async def get_messages_by_room_with_offset(websocket: WebSocket, data):
-    room_id = data["room_id"]
-    offset_id = data["offset_id"]
-    count = data["count"]
-
-    print(offset_id)
-
-    # restriction
-    if count > 30:
-        count = 30
-
-    if not (room_id in manager.user_info_by_websocket[id(websocket)]["rooms_ids"]):
-        return
-
-    db = SessionLocal()
-    
-    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
-        for msg in
-            db.query(models.Message).where(models.Message.room_id == room_id).where(models.Message.id < offset_id).order_by(models.Message.id.desc()).limit(count)
-    ]
-
-    print("\n", messages)
-
-    await manager.send_personal_message(websocket,
-        {
-            "action": "add_messages_to_room",
-            "data": {
-                "room_link": manager.opened_groups_by_id[room_id]["link"],
-                "messages": messages
-            }
-        }
-    )
-
-    """
-    SELECT messages.*, rooms.link AS room_link 
-    FROM messages 
-    JOIN rooms ON messages.room_id = rooms.id
-    WHERE messages.room_id = 197 AND messages.id < 1514323232
-    ORDER BY messages.id DESC 
-    LIMIT 15;
-    
-    """
-    # select messages.*, rooms.link as room_link from messages join rooms on messages.room_id = rooms.id;
-    # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
-
-
-
 async def load_data(websocket: WebSocket, data):
     data = data
 
@@ -415,8 +318,8 @@ actions = {
     "user_is_typing": user_is_typing,
     "update_access_token": update_access_token,
     "update_rooms_list": update_rooms_list,
-    "get_last_messages_by_room": get_last_messages_by_room,
-    "get_messages_by_room_with_offset": get_messages_by_room_with_offset,
+    # "get_last_messages_by_room": get_last_messages_by_room,
+    # "get_messages_by_room_with_offset": get_messages_by_room_with_offset,
     "load_data": load_data
 }
 # _______________________________
@@ -569,6 +472,207 @@ async def chat_with_me(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # todo
-    return {}
-    pass
+    
+    # ! Vulnerability
+    room_link = "chat_with_me_" + str(current_user.id)
+
+    r = db.query(models.Room).\
+        filter(models.Room.link == room_link).\
+            first()
+
+    if not r:
+        r = models.Room(
+            name = "Chat with me",
+            link = room_link,
+        )
+        db.add(r)
+        db.commit()
+        db.refresh(r)
+
+
+    user_in_room = db.query(models.RoomMembers).\
+        filter(models.RoomMembers.room_id == r.id).\
+            filter(models.RoomMembers.user_id == current_user.id).\
+            first()
+
+    if not user_in_room:
+        # add user to room
+        new_room_members_relation = models.RoomMembers(
+            user_id = current_user.id,
+            room_id = r.id
+        )
+        db.add(new_room_members_relation)
+        db.commit()
+
+    
+    # TODO add admins to room
+    admins = db.query(auth.models.User).filter(
+        auth.models.User.is_admin == True
+    )
+
+    # TODO when some admin logins, add him to chats with link "chat_with_me"
+    # TODO deny getting and creating rooms with link "chat_with_me"
+
+    
+    return JSONResponse(
+        status_code = 200,
+
+        # TODO
+        content = {
+            "room_link": room_link
+        }
+    )
+
+
+
+
+@chat_router.get("/get_last_messages/")
+async def get_last_messages(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    room_id:int,
+    count:int=30
+):
+    # room_id = str(data["room_id"])
+    # count = data["count"]
+
+    # restriction
+    if count > 30:
+        count = 30
+
+    # TODO check if group exists
+    # TODO if user in this group
+
+    
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
+        for msg in
+            db.query(models.Message)\
+                .where(models.Message.room_id == room_id)\
+                    .order_by(models.Message.id.desc())\
+                        .limit(count)
+    ]
+
+
+    """
+    SELECT messages.*, rooms.link AS room_link 
+    FROM messages 
+    JOIN rooms ON messages.room_id = rooms.id
+    WHERE messages.room_id = 197
+    ORDER BY messages.id DESC 
+    LIMIT 15;
+    
+    """
+
+
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "messages": json.dumps(messages, default=str)
+        }
+    )
+
+
+
+@chat_router.get("/get_messages_with_offset/")
+async def get_messages_with_offset(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    room_id:int,
+    offset_message_id: int,
+    count:int=30
+):
+
+    # restriction
+    if count > 30:
+        count = 30
+
+
+    # TODO check if group exists
+    # TODO if user in this group
+
+    
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
+        for msg in
+            db.query(models.Message)\
+                .where(models.Message.room_id == room_id)\
+                    .where(models.Message.id < offset_message_id)\
+                        .order_by(models.Message.id.desc())\
+                            .limit(count)
+    ]
+
+    """
+    SELECT messages.*, rooms.link AS room_link 
+    FROM messages 
+    JOIN rooms ON messages.room_id = rooms.id
+    WHERE messages.room_id = 197 AND messages.id < 1514323232
+    ORDER BY messages.id DESC 
+    LIMIT 15;
+    
+    """
+    # select messages.*, rooms.link as room_link from messages join rooms on messages.room_id = rooms.id;
+    # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "offset_message_id": offset_message_id,
+            "count": count,
+            "messages": json.dumps(messages, default=str)
+        }
+    )
+
+
+
+
+@chat_router.get("/get_messages_from_offset/")
+async def get_messages_from_offset(
+    *,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    room_id:int,
+    offset_message_id: int,
+    count:int=30
+):
+
+    # restriction
+    if count > 30:
+        count = 30
+
+
+    # TODO check if group exists
+    # TODO if user in this group
+
+    
+    messages = [{**schemas.MessageResponse.parse_obj(msg.__dict__).dict()}
+        for msg in
+            db.query(models.Message)\
+                .where(models.Message.room_id == room_id)\
+                    .where(models.Message.id > offset_message_id)\
+                        # .order_by(models.Message.id.desc())\
+                            .limit(count)
+    ]
+
+    """
+    SELECT messages.*, rooms.link AS room_link 
+    FROM messages 
+    JOIN rooms ON messages.room_id = rooms.id
+    WHERE messages.room_id = 197 AND messages.id > 6173
+    ORDER BY messages.id DESC 
+    LIMIT 15;
+    
+    """
+    # select messages.*, rooms.link as room_link from messages join rooms on messages.room_id = rooms.id;
+    # select * from messages where messages.room_id = 3 and messages.id < 15143 order by id desc limit 15;
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "room_id": room_id,
+            "offset_message_id": offset_message_id,
+            "count": count,
+            "messages": json.dumps(messages, default=str)
+        }
+    )

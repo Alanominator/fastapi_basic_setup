@@ -23,7 +23,6 @@ class RoomAdmins(Base):
 
 
 
-
 class Room(Base):
     __tablename__ = "rooms"
 
