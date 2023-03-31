@@ -28,6 +28,7 @@ class MessageResponse(BaseModel):
     date: date
     time: time
     # reply_to_message: Any
+    reply_to_message_id: Optional[int or None]
     message_data: dict
 
     # reply_to_message_id | message_data

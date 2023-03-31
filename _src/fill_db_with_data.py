@@ -101,7 +101,7 @@ def main():
             room_id = x[1],
             message_data = {
                 "message_type": "text_message",
-                "test": make_random_sentence()
+                "text": make_random_sentence()
             }
         )
         db.add(m) 

@@ -24,8 +24,8 @@ GOOGLE_CLIENT_SECRET = get_env_var("GOOGLE_CLIENT_SECRET")
 
 
 # jwt token settings
-ACCESS_TOKEN_EXPIRE_MINUTES = 20
-REFRESH_TOKEN_EXPIRE_MINUTES = 20
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+REFRESH_TOKEN_EXPIRE_MINUTES = 100
 
 # secret key (used for ecryption / decryption)
 # dd if=/dev/urandom bs=32 count=1 2>/dev/null | openssl base64

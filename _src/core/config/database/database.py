@@ -19,7 +19,7 @@ load_env()
 SQLALCHEMY_DATABASE_URL = get_env_var("DATABASE_URL")
 
 # TODO
-ASYNC_SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://gwen@localhost/fast_lms"
+ASYNC_SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://alan:fastapi@localhost/alanominator"
 
 
 

@@ -30,7 +30,6 @@ class Room(Base):
     name = Column(String(20), nullable=False)
     link = Column(String(20), unique=True, index=True, nullable=False)
     created_at = Column(DateTime(), server_default=func.now(), nullable=False)
-    # todo rename to date
 
     description = Column(Text()) # 100
     # TODO photos
@@ -77,9 +76,8 @@ class Message(Base):
 
     edited = Column(Boolean, nullable=False, default=False) # TODO server default False
 
-    # TODO message id deleted
     reply_to_message_id = Column("reply_to_message_id", Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True) # RESTRICT|CASCADE|SET NULL|NO ACTION|SET DEFAULT
-    reply_to_message = relationship("Message", remote_side=[id])
+    # reply_to_message = relationship("Message", remote_side=[id])
 
     message_data = Column("message_data", JSON, nullable=False)
 
@@ -99,23 +97,6 @@ class Message(Base):
 #     room = relationship("Room", backref=backref("history", uselist=False, cascade="all,delete" ))
 
 #     _data = Column("data", JSON, nullable=False)
-
-#     @hybrid_property
-#     def data(self):
-#         return self.data
-        
-
-#     @data.setter
-#     def data(self, new_data):
-#         if self.validate_message_data(new_data):
-#             self._data = new_data
-#             return
-#         raise Exception("data is not valid")
-        
-
-#     def validate_data(self, new_data):
-#         # True or False
-#         return isinstance(new_data, dict)
 
 
 

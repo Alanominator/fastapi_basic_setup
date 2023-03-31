@@ -5,12 +5,16 @@ import fastapi
 from fastapi import Depends, Cookie, WebSocket, WebSocketDisconnect
 from typing import List
 
-from core.config.database.database import SessionLocal
+from core.config.database.database import SessionLocal, AsyncSessionLocal
 from ..auth.routers import get_current_user
 
 from sqlalchemy.orm import Session
+import sqlalchemy
 
 from core.config.database.utils import get_db
+import psycopg2
+
+
 
 # from itsdangerous import exc
 
@@ -22,6 +26,9 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from fastapi import Depends, HTTPException, status
 from jose import jwt
+
+import asyncio
+import copy
 
 from core.config.settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 from . import schemas
@@ -257,6 +264,8 @@ async def load_data(websocket: WebSocket, data):
     data = data
 
     db = SessionLocal()
+    adb = AsyncSessionLocal()
+
     for room_id in data.keys():
         d = data[room_id]
 
@@ -269,21 +278,38 @@ async def load_data(websocket: WebSocket, data):
         if "messages_to_create" in d:
             messages = []
 
-            for x in d['messages_to_create']:
+            for new_message_data in d['messages_to_create']:
                 m = models.Message(
                     user_id = manager.user_info_by_websocket[id(websocket)]["db_user"].id,
                     room_id = room_id,
                     message_data = {
-                        "message_type": x["message_type"],
-                        "text": x["text"]
+                        "message_type": new_message_data["message_type"],
+                        "text": new_message_data["text"]
                     }
                 )
-                # ! 
-                # TODO OPTIMIZE
+                
+                if "reply_to_message_id" in new_message_data:
+                    reply_to_message_id = int(new_message_data["reply_to_message_id"])
+
+                    message_to_reply_to = db.query(models.Message).\
+                        where(models.Message.id == reply_to_message_id).\
+                            first()
+                    
+                    if not message_to_reply_to:
+                        reply_to_message_id = None
+                    else:
+                        m.reply_to_message_id = reply_to_message_id
+
+                else:
+                    reply_to_message_id = None
+                
+
                 db.add(m)
                 db.commit()
+
                 db.refresh(m)
-                
+
+
                 messages.append(
                     schemas.MessageResponse.parse_obj(m.__dict__).dict()
                 )
@@ -291,7 +317,7 @@ async def load_data(websocket: WebSocket, data):
 
             await manager.broadcast_list_of_ws(manager.websockets_group_by_room[room_id],
                 {
-                "action": "add_messages_to_room",
+                    "action": "add_messages_to_room",
                     "data": {
                         "room_link": manager.opened_groups_by_id[room_id]["link"],
                         "messages": messages
@@ -318,8 +344,6 @@ actions = {
     "user_is_typing": user_is_typing,
     "update_access_token": update_access_token,
     "update_rooms_list": update_rooms_list,
-    # "get_last_messages_by_room": get_last_messages_by_room,
-    # "get_messages_by_room_with_offset": get_messages_by_room_with_offset,
     "load_data": load_data
 }
 # _______________________________
@@ -358,7 +382,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await actions[
                             data["action"]
                         ](websocket, data["data"])
-                    except DivisionByZero as e:
+                    except DivisionByZero as e: # ! remove "DivisionByZero as e" in production
                         print(e)
                 else:
                     print("Unknown action ", data["action"])
